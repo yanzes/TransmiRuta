@@ -1,6 +1,7 @@
 import "server-only";
 
 import { asShared, croma, shared } from "@/lib/croma";
+import { getFleetFromFeed } from "@/lib/feed-live";
 import { arrivalsResult, routeResult, stationsPage, vehiclesPage } from "@/lib/schemas";
 import type { Result, Trace } from "@/lib/trace";
 import type { Arrivals, Bus, Fleet, RouteInfo, RouteLine, Station } from "@/lib/types";
@@ -17,6 +18,9 @@ const VEHICLES = "/co/transmilenio/vehicles/v1";
 const PER_PAGE = 500;
 
 export async function getFleet(): Promise<Result<Fleet>> {
+  // No key, no Croma. Rather than show an empty map, read the official feed,
+  // which needs no credentials: the deployment works out of the box.
+  if (!process.env.CROMA_API_KEY) return getFleetFromFeed();
   const { value, fresh } = await fleetCache("fleet", loadFleet, (r) => r.ok);
   return { ...value, traces: asShared(value.traces, fresh) };
 }
