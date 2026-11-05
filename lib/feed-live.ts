@@ -116,7 +116,16 @@ export async function getFleetFromFeed(): Promise<Result<Fleet>> {
       ms: Date.now() - started,
       shared: false,
     };
-    const asOf = toIso(toNumber(message.header?.timestamp as LongLike)) ?? at;
+    // The feed header can lag days behind; "as of" should mean the newest
+    // report the map is actually drawing, not when the file was written.
+    const newestReport = buses.reduce((max, bus) => {
+      const time = bus.reportedAt ? Date.parse(bus.reportedAt) : 0;
+      return time > max ? time : max;
+    }, 0);
+    const asOf =
+      toIso(Math.round(newestReport / 1000)) ??
+      toIso(toNumber(message.header?.timestamp as LongLike)) ??
+      at;
 
     value = { ok: true, data: { asOf, total: buses.length, buses, routes }, traces: [trace] };
   } catch (error) {
