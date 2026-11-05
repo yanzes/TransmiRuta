@@ -1,5 +1,10 @@
 node_modules
 **/node_modules
-client/dist
 .next
+client/dist
+server/data
+**/*.zip
 *.log
+.env
+.env.*
+!.env.example
