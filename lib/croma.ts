@@ -12,7 +12,7 @@ export type Call<T> = { ok: true; data: T; trace: Trace } | { ok: false; error: 
 /** POST to a Croma endpoint and validate `data` with `schema`. */
 export async function croma<S extends z.ZodType>(path: string, body: Record<string, unknown>, schema: S): Promise<Call<z.infer<S>>> {
   const key = process.env.CROMA_API_KEY;
-  if (!key) return { ok: false, error: { code: "missing_api_key", message: "Configura CROMA_API_KEY en .env.local." }, trace: null };
+  if (!key) return { ok: false, error: { code: "missing_api_key", message: "Esta parte necesita una CROMA_API_KEY configurada en el servidor." }, trace: null };
   const started = Date.now();
   const at = new Date().toISOString();
 

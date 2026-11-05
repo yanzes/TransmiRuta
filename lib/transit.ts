@@ -2,6 +2,7 @@ import "server-only";
 
 import { asShared, croma, shared } from "@/lib/croma";
 import { getFleetFromFeed } from "@/lib/feed-live";
+import { routeFromCatalog, stationsFromCatalog } from "@/lib/gtfs-catalog";
 import { arrivalsResult, routeResult, stationsPage, vehiclesPage } from "@/lib/schemas";
 import type { Result, Trace } from "@/lib/trace";
 import type { Arrivals, Bus, Fleet, RouteInfo, RouteLine, Station } from "@/lib/types";
@@ -59,7 +60,9 @@ async function loadFleet(): Promise<Result<Fleet>> {
   return { ok: true, data: { asOf: first.data.as_of, total: buses.length, buses, routes }, traces };
 }
 
-export async function getStations(): Promise<Result<Station[]>> {
+export async function getStations(): Promise<Result<Station[]> {
+  // Keyless mode: the static GTFS shipped with the app already knows every stop.
+  if (!process.env.CROMA_API_KEY) return { ok: true, data: stationsFromCatalog(), traces: [] };
   const { value, fresh } = await stationCache("stations", loadStations, (r) => r.ok);
   return { ...value, traces: asShared(value.traces, fresh) };
 }
@@ -90,6 +93,13 @@ export async function getArrivals(stopId: string): Promise<Result<Arrivals>> {
 }
 
 export async function getRoute(routeId: string): Promise<Result<RouteLine>> {
+  // Keyless mode: draw the route by joining its stops in order.
+  if (!process.env.CROMA_API_KEY) {
+    const line = routeFromCatalog(routeId);
+    return line
+      ? { ok: true, data: line, traces: [] }
+      : { ok: false, error: { code: "not_found", message: "Esa ruta no aparece en la red." }, traces: [] };
+  }
   const { value, fresh } = await routeCache(routeId, async (): Promise<Result<RouteLine>> => {
     const r = await croma("/co/transmilenio/route/v1", { route_id: routeId, include_geometry: true }, routeResult);
     if (!r.ok) return { ok: false, error: r.error, traces: r.trace ? [r.trace] : [] };

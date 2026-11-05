@@ -3,7 +3,7 @@ import "server-only";
 import GtfsRealtimeBindings from "gtfs-realtime-bindings";
 
 import catalog from "@/lib/route-catalog.json";
-import type { System } from "@/lib/schemas";
+import { systemFor } from "@/lib/system-of";
 import type { Result, Trace } from "@/lib/trace";
 import type { Bus, Fleet, RouteInfo } from "@/lib/types";
 
@@ -44,19 +44,6 @@ function toIso(seconds: number | null): string | null {
 }
 
 const STATUS: Record<number, string> = { 0: "INCOMING_AT", 1: "STOPPED_AT", 2: "IN_TRANSIT_TO" };
-
-/**
- * Troncal codes are a letter plus one or two digits (B10, C25, F23); three
- * digits is a zonal or feeder service. The static GTFS carries no system
- * column, so the code pattern is the only signal there is.
- */
-function systemFor(code: string | null): System {
-  if (!code) return "other";
-  const upper = code.toUpperCase();
-  if (/^[A-Z]\d{1,2}$/.test(upper)) return "troncal";
-  if (/^[A-Z]\d{3,4}$/.test(upper) || /^\d{1,4}[A-Z]?$/.test(upper)) return "zonal_urbano";
-  return "other";
-}
 
 let cache: { at: number; value: Result<Fleet> } | null = null;
 
