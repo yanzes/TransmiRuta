@@ -60,7 +60,7 @@ async function loadFleet(): Promise<Result<Fleet>> {
   return { ok: true, data: { asOf: first.data.as_of, total: buses.length, buses, routes }, traces };
 }
 
-export async function getStations(): Promise<Result<Station[]> {
+export async function getStations(): Promise<Result<Station[]>> {
   // Keyless mode: the static GTFS shipped with the app already knows every stop.
   if (!process.env.CROMA_API_KEY) return { ok: true, data: stationsFromCatalog(), traces: [] };
   const { value, fresh } = await stationCache("stations", loadStations, (r) => r.ok);
