@@ -1,0 +1,138 @@
+body.options {
+  display: flex;
+  justify-content: center;
+  padding: 44px 24px 64px;
+  overflow-y: auto;
+}
+
+.panel {
+  width: 100%;
+  max-width: 560px;
+}
+
+h1 {
+  margin: 10px 0 0;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.lede {
+  margin: 10px 0 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+.field {
+  margin: 28px 0 0;
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+}
+
+label {
+  display: block;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.input-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+input {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 8px 11px;
+  color: var(--text);
+  background: #0f0f11;
+  border: 1px solid var(--line);
+}
+
+input::placeholder {
+  color: #5b5b63;
+}
+
+input[aria-invalid="true"] {
+  border-color: #d64545;
+}
+
+.help {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.status {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.status.ok {
+  color: #4ea672;
+}
+
+.status.bad {
+  color: #d64545;
+}
+
+.notes {
+  margin-top: 34px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+h2 {
+  margin: 0 0 10px;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+ul {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+  line-height: 1.85;
+  color: #b9b9c0;
+}
+
+kbd {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  padding: 1px 5px;
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+
+footer {
+  margin-top: 34px;
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+  font-size: 11.5px;
+  color: #6f6f78;
+}
+
+a {
+  color: inherit;
+  text-underline-offset: 2px;
+}

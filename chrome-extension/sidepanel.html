@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="color-scheme" content="dark" />
+    <title>TransMilenio en vivo</title>
+    <link rel="stylesheet" href="ui.css" />
+    <link rel="stylesheet" href="shell.css" />
+    <script defer src="shell.js"></script>
+  </head>
+  <body class="side">
+    <header class="bar">
+      <span class="dot" aria-hidden="true"></span>
+      <div class="bar-text">
+        <span class="eyebrow">En vivo · Bogotá</span>
+        <span class="host" id="host">localhost:3000</span>
+      </div>
+      <div class="bar-actions">
+        <button type="button" class="icon-btn" id="reload" title="Recargar" aria-label="Recargar">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20 11a8 8 0 1 0-2.6 5.9" />
+            <path d="M20 4v7h-7" />
+          </svg>
+        </button>
+        <button type="button" class="icon-btn" id="window" title="Abrir en una ventana" aria-label="Abrir en una ventana">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect x="3" y="5" width="13" height="11" rx="1" />
+            <path d="M9 19h9a3 3 0 0 0 3-3V8" />
+          </svg>
+        </button>
+        <button type="button" class="icon-btn" id="opts" title="Ajustes" aria-label="Ajustes">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M4 7h10M18 7h2M4 17h4M12 17h8" />
+            <circle cx="16" cy="7" r="2" />
+            <circle cx="10" cy="17" r="2" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="frame">
+      <iframe id="app" title="Mapa de TransMilenio en vivo" src="about:blank"></iframe>
+      <div class="fallback" id="fallback" hidden>
+        <span class="eyebrow">Esperando la app</span>
+        <p>
+          No hay respuesta de <code id="fallbackUrl"></code> todavía.
+        </p>
+        <p class="hint">
+          Corre <code>npm run dev</code> en el proyecto y define <code>CROMA_API_KEY</code> en
+          <code>.env.local</code>. Si usas un despliegue, escribe su dirección en Ajustes.
+        </p>
+        <button type="button" class="btn" id="retry">Reintentar</button>
+      </div>
+    </div>
+  </body>
+</html>
