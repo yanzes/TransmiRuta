@@ -3,6 +3,7 @@ import "server-only";
 import { asShared, croma, shared } from "@/lib/croma";
 import { getFleetFromFeed } from "@/lib/feed-live";
 import { routeFromCatalog, stationsFromCatalog } from "@/lib/gtfs-catalog";
+import { estimatesAtStop } from "@/lib/live-arrivals";
 import { arrivalsResult, routeResult, stationsPage, vehiclesPage } from "@/lib/schemas";
 import type { Result, Trace } from "@/lib/trace";
 import type { Arrivals, Bus, Fleet, RouteInfo, RouteLine, Station } from "@/lib/types";
@@ -23,6 +24,11 @@ export async function getFleet(): Promise<Result<Fleet>> {
   // which needs no credentials: the deployment works out of the box.
   if (!process.env.CROMA_API_KEY) return getFleetFromFeed();
   const { value, fresh } = await fleetCache("fleet", loadFleet, (r) => r.ok);
+  // Clave sin créditos o API caída: el feed oficial sigue contando los buses.
+  if (!value.ok) {
+    const fallback = await getFleetFromFeed();
+    if (fallback.ok) return { ...fallback, traces: [...value.traces, ...fallback.traces] };
+  }
   return { ...value, traces: asShared(value.traces, fresh) };
 }
 
@@ -85,6 +91,34 @@ async function loadStations(): Promise<Result<Station[]>> {
 }
 
 export async function getArrivals(stopId: string): Promise<Result<Arrivals>> {
+  // Keyless mode: the same estimate the stop screen shows, in the API's shape.
+  if (!process.env.CROMA_API_KEY) {
+    const detail = await estimatesAtStop(stopId);
+    if (!detail) return { ok: false, error: { code: "not_found", message: "Esa parada no aparece en la red." }, traces: [] };
+    return {
+      ok: true,
+      data: {
+        as_of: detail.feed.asOf,
+        found: true,
+        stop_id: stopId,
+        stop_name: detail.stop.name,
+        count: detail.arrivals.length,
+        arrivals: detail.arrivals.map((a) => ({
+          predicted_at: null,
+          minutes_away: a.minutes,
+          basis: "estimated" as const,
+          delay_seconds: null,
+          route_id: a.routeId,
+          route_code: a.code,
+          route_name: a.name,
+          system: a.system,
+          vehicle_label: a.vehicle,
+          license_plate: null,
+        })),
+      },
+      traces: [],
+    };
+  }
   const { value, fresh } = await arrivalsCache(stopId, async () => {
     const r = await croma("/co/transmilenio/stop-arrivals/v1", { stop_id: stopId, limit: 12 }, arrivalsResult);
     return r.ok ? { ok: true, data: r.data, traces: [r.trace] } : { ok: false, error: r.error, traces: r.trace ? [r.trace] : [] };
@@ -102,7 +136,12 @@ export async function getRoute(routeId: string): Promise<Result<RouteLine>> {
   }
   const { value, fresh } = await routeCache(routeId, async (): Promise<Result<RouteLine>> => {
     const r = await croma("/co/transmilenio/route/v1", { route_id: routeId, include_geometry: true }, routeResult);
-    if (!r.ok) return { ok: false, error: r.error, traces: r.trace ? [r.trace] : [] };
+    if (!r.ok) {
+      // Sin créditos o sin red, el catálogo estático igual conoce el trazado.
+      const fallback = routeFromCatalog(routeId);
+      if (fallback) return { ok: true, data: fallback, traces: r.trace ? [r.trace] : [] };
+      return { ok: false, error: r.error, traces: r.trace ? [r.trace] : [] };
+    }
     const route = r.data.route;
     if (!route) return { ok: false, error: { code: "not_found", message: "Esa ruta no aparece en la red." }, traces: [r.trace] };
     // The busiest pattern is the one riders know; the rest are short turns.

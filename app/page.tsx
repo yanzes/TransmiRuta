@@ -1,5 +1,5 @@
-import { LiveApp } from "@/components/live-app";
+import { HomeScreen } from "@/components/app/home";
 
 export default function Page() {
-  return <LiveApp />;
+  return <HomeScreen />;
 }
