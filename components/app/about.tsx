@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
 
-import { FeedLine, Label, Rule, Shell, TextButton } from "@/components/app/primitives";
+import { FeedLine, Guide, Label, Rule, Shell, TextButton } from "@/components/app/primitives";
 import { setContrast, useContrast } from "@/lib/appearance";
 import type { FeedState, Fleet } from "@/lib/types";
 import { useJson } from "@/lib/use-live";
@@ -40,6 +40,11 @@ export function AboutScreen() {
       <p className="mt-3 max-w-[52ch] text-[13.5px] leading-relaxed text-quiet">
         TransMiRuta es un mapa abierto para moverse en Bogotá: los buses de TransMilenio y el SITP, los próximos en cada paradero y el recorrido de
         cada ruta. Datos públicos, sin cuenta y sin publicidad.
+
+      <Guide title="Qué hay en esta ventana">
+        El origen del dato y su hora de actualización, el tema claro u oscuro, el contraste alto y los enlaces a privacidad y reportes. Las demás
+        ventanas están arriba: Mapa para ver los buses, Buscar para encontrar una ruta o un paradero, y Guardados para lo que marques con ☆.
+      </Guide>
       </p>
 
       <section className="mt-10">
@@ -110,7 +115,7 @@ export function AboutScreen() {
       </section>
 
       <Rule className="mt-10" />
-      <p className="mt-4 text-[10.5px] leading-relaxed text-faint">No es una app oficial del Distrito. Mapa © CARTO, © OpenStreetMap.</p>
+      <p className="mt-4 text-[10.5px] leading-relaxed text-faint">Es de uso libre. Creada por yancodev.</p>
     </Shell>
   );
 }

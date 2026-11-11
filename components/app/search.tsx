@@ -2,7 +2,7 @@
 
 import { useDeferredValue, useState } from "react";
 
-import { Bone, Empty, Label, Shell } from "@/components/app/primitives";
+import { Bone, Empty, Guide, Label, Shell } from "@/components/app/primitives";
 import { RouteRow, StopRow } from "@/components/app/rows";
 import type { SearchResult } from "@/lib/types";
 import { useJson } from "@/lib/use-live";
@@ -18,6 +18,10 @@ export function SearchScreen() {
   return (
     <Shell className="max-w-[760px] py-10">
       <h1 className="text-[23px] font-medium tracking-[-0.02em]">Buscar</h1>
+      <Guide title="Cómo buscar">
+        Escribe al menos dos letras: el código que el bus lleva pintado (B10, K305), parte del nombre de la ruta (Portal Norte) o el de un
+        paradero (Calle 72). No importan las tildes; los resultados llegan separados en Rutas y Paraderos y basta tocar uno para abrirlo.
+      </Guide>
 
       <input
         autoFocus

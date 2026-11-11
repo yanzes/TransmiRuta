@@ -143,3 +143,16 @@ export function BackLink({ href, children = "Volver" }: { href: string; children
     </Link>
   );
 }
+
+/**
+ * Two sentences under a heading: what this window is for and how to use it.
+ * A left rule instead of a box keeps it part of the page, not a banner.
+ */
+export function Guide({ title, children, className }: { title: string; children: React.ReactNode; className?: string }) {
+  return (
+    <aside className={cn("mt-5 border-l border-line pl-3.5", className)}>
+      <Label>{title}</Label>
+      <p className="mt-1 max-w-[56ch] text-[11.5px] leading-relaxed text-quiet">{children}</p>
+    </aside>
+  );
+}

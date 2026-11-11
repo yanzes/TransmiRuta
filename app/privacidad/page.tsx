@@ -29,7 +29,7 @@ export default function Page() {
       </dl>
 
       <p className="mt-8 text-[10.5px] leading-relaxed text-faint">
-        No es una app oficial del Distrito. Datos abiertos de TransMilenio S.A. · Mapa © CARTO, © OpenStreetMap.
+        Es de uso libre. Creada por yancodev. Datos abiertos de TransMilenio S.A.
       </p>
     </Shell>
   );

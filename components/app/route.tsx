@@ -3,7 +3,7 @@
 import Link from "next/link";
 
 import { TransitMap } from "@/components/app/map";
-import { BackLink, Bone, Empty, FeedLine, Label, Shell, TextButton, useDark } from "@/components/app/primitives";
+import { BackLink, Bone, Empty, FeedLine, Guide, Label, Shell, TextButton, useDark } from "@/components/app/primitives";
 import { splitName } from "@/lib/format";
 import { toggleRoute, useIsSaved } from "@/lib/saved";
 import { systemLabel } from "@/lib/systems";
@@ -45,6 +45,11 @@ export function RouteScreen({ id }: { id: string }) {
             <p className="mt-1 font-mono text-[13px] text-accent">{route.code}</p>
             <h1 className="mt-1 text-[26px] font-medium leading-tight tracking-[-0.025em]">{splitName(route.name) || systemLabel(route.system)}</h1>
             <p className="mt-1 text-[11.5px] text-faint">{systemLabel(route.system)}</p>
+
+            <Guide title="Cómo leer esta ventana">
+              Las paradas van en el orden del recorrido: toca una para ver sus próximas llegadas. En el mapa, el trazado une esas paradas y cada
+              bus lleva el código de la ruta que está haciendo; la ☆ guarda la ruta en Guardados.
+            </Guide>
 
             <dl className="mt-6 grid grid-cols-3 gap-4 border-y border-line py-3">
               {[
@@ -96,7 +101,7 @@ export function RouteScreen({ id }: { id: string }) {
                 dark={dark}
                 stops={(line.stops ?? []).map((stop) => ({ id: stop.id, name: stop.name ?? stop.id, lat: stop.lat, lon: stop.lon }))}
                 path={line.coordinates}
-                buses={onRoad.map((bus) => ({ id: bus.id, lat: bus.lat, lon: bus.lon, accent: true }))}
+                buses={onRoad.map((bus) => ({ id: bus.id, lat: bus.lat, lon: bus.lon, code: route.code, accent: true }))}
                 fit
               />
             </div>

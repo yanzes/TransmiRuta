@@ -2,20 +2,22 @@
 
 import "maplibre-gl/dist/maplibre-gl.css";
 
-import maplibregl, { type GeoJSONSource, type Map as MapLibre } from "maplibre-gl";
+import maplibregl, { type GeoJSONSource, type Map as MapLibre, type SymbolLayerSpecification } from "maplibre-gl";
 import { useEffect, useRef } from "react";
 
 import { cn } from "@/lib/utils";
 
-/** Basemaps without labels or points of interest: the page supplies the meaning. */
+/** Basemaps with street names: a map nobody can read is not a map. */
 const STYLES = {
-  dark: "https://basemaps.cartocdn.com/gl/dark-matter-nolabels-gl-style/style.json",
-  light: "https://basemaps.cartocdn.com/gl/positron-nolabels-gl-style/style.json",
+  dark: "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json",
+  light: "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json",
 };
 const BOGOTA: [number, number] = [-74.075, 4.648];
 
 export interface MapStop {
   id: string;
+  /** The code the stop is known by; the id when the caller has no other. */
+  code?: string;
   name: string;
   lat: number;
   lon: number;
@@ -25,6 +27,8 @@ export interface MapBus {
   id: string;
   lat: number;
   lon: number;
+  /** The route the bus is running, as riders read it on the windscreen. */
+  code?: string;
   /** Highlighted buses of the route in focus. */
   accent?: boolean;
 }
@@ -44,8 +48,9 @@ export interface TransitMapProps {
 }
 
 /**
- * A monochrome map: graphite dots for buses and stops, a single accent for the
- * route or stop in focus. No glows, no labels from the basemap, no colour code.
+ * A quiet map: graphite dots for buses and stops, a single accent for the
+ * route or stop in focus, and typed street names and addresses from the
+ * basemap, recoloured to the page ink so nothing shouts.
  */
 export function TransitMap(props: TransitMapProps) {
   const container = useRef<HTMLDivElement>(null);
@@ -70,6 +75,8 @@ export function TransitMap(props: TransitMapProps) {
 
     m.on("style.load", () => {
       addLayers(m, live.current.dark);
+      if (live.current.dark) liftBasemap(m);
+      tuneLabels(m, live.current.dark);
       ready.current = true;
       draw(m, true);
     });
@@ -131,7 +138,7 @@ export function TransitMap(props: TransitMapProps) {
       features: (p.stops ?? []).map((stop) => ({
         type: "Feature",
         geometry: { type: "Point", coordinates: [stop.lon, stop.lat] },
-        properties: { id: stop.id, sel: stop.id === p.selected ? 1 : 0 },
+        properties: { id: stop.id, code: stop.code ?? stop.id, sel: stop.id === p.selected ? 1 : 0 },
       })),
     });
     m.getSource<GeoJSONSource>("buses")?.setData({
@@ -139,7 +146,7 @@ export function TransitMap(props: TransitMapProps) {
       features: (p.buses ?? []).map((bus) => ({
         type: "Feature",
         geometry: { type: "Point", coordinates: [bus.lon, bus.lat] },
-        properties: { id: bus.id, accent: bus.accent ? 1 : 0 },
+        properties: { id: bus.id, code: bus.code ?? "", accent: bus.accent ? 1 : 0 },
       })),
     });
     if (withFit) fitBounds();
@@ -165,6 +172,77 @@ export function TransitMap(props: TransitMapProps) {
   return <div ref={container} className={cn("size-full", props.className)} />;
 }
 
+/**
+ * Street names and house numbers in the page ink instead of the basemap blue,
+ * and the address layer, which the stock style paints transparent, switched on
+ * from the zoom where a rider can actually use it.
+ */
+/**
+ * The dark basemap ships almost black. Mixing every surface a little towards
+ * white keeps the map quiet but readable, and leaves the labels for last.
+ */
+function liftBasemap(m: MapLibre) {
+  for (const layer of m.getStyle()?.layers ?? []) {
+    if (layer.type === "symbol") continue;
+    const paint = (layer as { paint?: Record<string, unknown> }).paint;
+    if (!paint) continue;
+    for (const key of Object.keys(paint)) {
+      if (!/color$/.test(key)) continue;
+      const value = paint[key];
+      if (typeof value !== "string") continue;
+      const amount =
+        key === "background-color"
+          ? 0.16
+          : layer.id.startsWith("road")
+            ? key.includes("case")
+              ? 0.2
+              : 0.26
+            : layer.id.startsWith("building")
+              ? 0.32
+              : 0.12;
+      const lifted = mixWhite(value, amount);
+      if (lifted) m.setPaintProperty(layer.id, key, lifted);
+    }
+  }
+}
+
+/** Blend a CSS colour towards white; null when it is not a plain colour. */
+function mixWhite(color: string, amount: number): string | null {
+  const parsed = parseColor(color);
+  if (!parsed) return null;
+  const mix = (channel: number) => Math.round(channel + (255 - channel) * amount);
+  return `rgba(${mix(parsed[0])}, ${mix(parsed[1])}, ${mix(parsed[2])}, ${parsed[3]})`;
+}
+
+function parseColor(color: string): [number, number, number, number] | null {
+  const value = color.trim();
+  const hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(value);
+  if (hex) {
+    const body = hex[1].length === 3 ? hex[1].split("").map((c) => c + c).join("") : hex[1];
+    return [parseInt(body.slice(0, 2), 16), parseInt(body.slice(2, 4), 16), parseInt(body.slice(4, 6), 16), 1];
+  }
+  const rgba = /^rgba?(([^)]+))$/i.exec(value);
+  if (!rgba) return null;
+  const parts = rgba[1].split(",").map((part) => Number(part.trim()));
+  if (parts.length < 3 || parts.some((part) => Number.isNaN(part))) return null;
+  return [parts[0], parts[1], parts[2], parts[3] ?? 1];
+}
+
+function tuneLabels(m: MapLibre, dark: boolean) {
+  const ink = dark ? "#d6dcd3" : "#5c615c";
+  const halo = dark ? "rgba(18,21,18,0.9)" : "rgba(251,251,250,0.95)";
+
+  for (const id of ["roadname_major", "roadname_pri", "roadname_sec", "roadname_minor", "place_suburbs"]) {
+    if (!m.getLayer(id)) continue;
+    m.setPaintProperty(id, "text-color", ink);
+    m.setPaintProperty(id, "text-halo-color", halo);
+    m.setPaintProperty(id, "text-halo-width", 1.6);
+  }
+
+  // House numbers ("63-25") are noise at street level: a rider needs the
+  // street name, so the address layer stays hidden.
+  if (m.getLayer("housenumber")) m.setLayoutProperty("housenumber", "visibility", "none");
+}
 function addLayers(m: MapLibre, dark: boolean) {
   if (m.getLayer("buses")) return;
   const empty: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
@@ -217,4 +295,83 @@ function addLayers(m: MapLibre, dark: boolean) {
       "circle-stroke-width": 0.8,
     },
   });
+
+  // The stop in focus always says which stop it is; the rest say it once the
+  // map is close enough that the code helps rather than clutters.
+  m.addLayer({
+    id: "stop-code-selected",
+    type: "symbol",
+    source: "stops",
+    filter: ["==", ["get", "sel"], 1],
+    layout: {
+      "text-field": ["get", "code"],
+      "text-font": labelFont(m),
+      "text-size": 11,
+      "text-anchor": "top",
+      "text-offset": [0, 1.2],
+      "text-allow-overlap": true,
+      "text-ignore-placement": true,
+    },
+    paint: { "text-color": accent, "text-halo-color": paper, "text-halo-width": 1.4 },
+  } satisfies SymbolLayerSpecification);
+  m.addLayer({
+    id: "stop-codes",
+    type: "symbol",
+    source: "stops",
+    minzoom: 15,
+    filter: ["!=", ["get", "sel"], 1],
+    layout: {
+      "text-field": ["get", "code"],
+      "text-font": labelFont(m),
+      "text-size": ["interpolate", ["linear"], ["zoom"], 15, 9.5, 18, 11.5],
+      "text-anchor": "top",
+      "text-offset": [0, 1.2],
+      "text-optional": true,
+    },
+    paint: { "text-color": ink, "text-opacity": 0.72, "text-halo-color": paper, "text-halo-width": 1.2 },
+  } satisfies SymbolLayerSpecification);
+
+  // A bus is known by its route, never by its fleet number: the highlighted
+  // ones always say it, the rest once the map is close enough to tell them apart.
+  m.addLayer({
+    id: "bus-code-accent",
+    type: "symbol",
+    source: "buses",
+    filter: ["all", ["==", ["get", "accent"], 1], ["!=", ["get", "code"], ""]],
+    layout: {
+      "text-field": ["get", "code"],
+      "text-font": labelFont(m),
+      "text-size": 11,
+      "text-anchor": "top",
+      "text-offset": [0, -1.2],
+      "text-allow-overlap": true,
+      "text-ignore-placement": true,
+    },
+    paint: { "text-color": accent, "text-halo-color": paper, "text-halo-width": 1.4 },
+  } satisfies SymbolLayerSpecification);
+  m.addLayer({
+    id: "bus-codes",
+    type: "symbol",
+    source: "buses",
+    minzoom: 15,
+    filter: ["all", ["!=", ["get", "accent"], 1], ["!=", ["get", "code"], ""]],
+    layout: {
+      "text-field": ["get", "code"],
+      "text-font": labelFont(m),
+      "text-size": ["interpolate", ["linear"], ["zoom"], 15, 9.5, 18, 11.5],
+      "text-anchor": "top",
+      "text-offset": [0, -1.2],
+      "text-optional": true,
+    },
+    paint: { "text-color": ink, "text-opacity": 0.7, "text-halo-color": paper, "text-halo-width": 1.2 },
+  } satisfies SymbolLayerSpecification);
+}
+
+/** The font stack the basemap already loads, so our labels reuse its glyphs. */
+function labelFont(m: MapLibre): string[] {
+  for (const layer of m.getStyle()?.layers ?? []) {
+    const font = (layer as { layout?: { "text-font"?: unknown } }).layout?.["text-font"];
+    if (Array.isArray(font) && font.length > 0 && font.every((f) => typeof f === "string")) return font as string[];
+  }
+  return ["Open Sans Regular"];
 }

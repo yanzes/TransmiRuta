@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 
 import { TransitMap } from "@/components/app/map";
 import { Onboarding } from "@/components/app/onboarding";
-import { Bone, FeedLine, Label, Shell, TextButton, useDark } from "@/components/app/primitives";
+import { Bone, FeedLine, Guide, Label, Shell, TextButton, useDark } from "@/components/app/primitives";
 import { SavedRow, StopRow } from "@/components/app/rows";
 import { BOGOTA } from "@/lib/geo";
 import { useSaved, type SavedStop } from "@/lib/saved";
@@ -32,7 +32,7 @@ export function HomeScreen() {
       .flatMap((bus) => {
         const route = bus.route ? fleet.routes[bus.route] : undefined;
         if (!route?.code || !codes.has(route.code)) return [];
-        return [{ id: bus.id, lat: bus.lat, lon: bus.lon }];
+        return [{ id: bus.id, lat: bus.lat, lon: bus.lon, code: route.code }];
       })
       .slice(0, 300);
   }, [fleet, stops]);
@@ -78,6 +78,11 @@ export function HomeScreen() {
             />
           </form>
 
+          <Guide title="Cómo se usa">
+            Toca un punto del mapa o un paradero de la lista «Cerca del centro» para ver cuánto falta para el próximo bus. También puedes
+            escribir arriba el código de una ruta (C25, K305) o el nombre de un barrio y pulsar Enter: la búsqueda se abre en Buscar.
+          </Guide>
+
           <FeedLine feed={nearby?.feed} className="mt-3" />
 
           {saved.length > 0 ? (
@@ -114,7 +119,7 @@ export function HomeScreen() {
           </section>
 
           <p className="mt-10 max-w-[52ch] text-[10.5px] leading-relaxed text-faint">
-            Datos abiertos de TransMilenio S.A. · Mapa © CARTO, © OpenStreetMap. Los minutos se calculan con la última posición de cada bus.
+            Es de uso libre. Creada por yancodev. Datos abiertos de TransMilenio S.A. Los minutos se calculan con la última posición de cada bus.
           </p>
         </div>
 

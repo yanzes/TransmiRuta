@@ -1,6 +1,6 @@
 "use client";
 
-import { Empty, Label, Shell } from "@/components/app/primitives";
+import { Empty, Guide, Label, Shell } from "@/components/app/primitives";
 import { RouteRow, SavedRow } from "@/components/app/rows";
 import { useSaved, type SavedRoute, type SavedStop } from "@/lib/saved";
 
@@ -12,7 +12,10 @@ export function SavedScreen() {
   return (
     <Shell className="max-w-[760px] py-10">
       <h1 className="text-[23px] font-medium tracking-[-0.02em]">Guardados</h1>
-      <p className="mt-2 text-[12.5px] leading-relaxed text-quiet">En este navegador, sin cuenta. La estrella de un paradero o de una ruta los trae aquí.</p>
+      <Guide title="Cómo funciona">
+        Todo lo que marques con ☆ queda aquí, en este navegador y sin cuenta: paraderos para ver sus próximos buses y rutas para abrirlas de
+        un toque. Se guarda desde la página del paradero o de la ruta, y la misma ☆ lo quita.
+      </Guide>
 
       {saved.length === 0 ? (
         <div className="mt-7">

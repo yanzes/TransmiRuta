@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { TransitMap } from "@/components/app/map";
-import { BackLink, Bone, Empty, FeedLine, Label, Shell, TextButton, useDark } from "@/components/app/primitives";
+import { BackLink, Bone, Empty, FeedLine, Guide, Label, Shell, TextButton, useDark } from "@/components/app/primitives";
 import { ArrivalRow, NextArrival, RouteRow } from "@/components/app/rows";
 import { toggleStop, useIsSaved } from "@/lib/saved";
 import type { StopDetail } from "@/lib/types";
@@ -21,7 +21,7 @@ export function StopScreen({ id }: { id: string }) {
   const [next, ...later] = arrivals;
   const buses = (data?.incoming ?? [])
     .filter((bus) => !only || bus.code === only)
-    .map((bus) => ({ id: bus.id, lat: bus.lat, lon: bus.lon, accent: true }));
+    .map((bus) => ({ id: bus.id, lat: bus.lat, lon: bus.lon, code: bus.code, accent: true }));
 
   return (
     <Shell className="py-8">
@@ -46,6 +46,11 @@ export function StopScreen({ id }: { id: string }) {
             <Label>Paradero</Label>
             <h1 className="mt-1 text-[26px] font-medium leading-tight tracking-[-0.025em]">{stop.name}</h1>
             <p className="mt-1 text-[11.5px] text-faint">{stop.routes.length} rutas</p>
+
+            <Guide title="Cómo leer esta ventana">
+              Arriba va el próximo bus con los minutos que le faltan; debajo, los que vienen después. Toca un código para ver solo esa ruta,
+              «Actualizar» para refrescar y la ☆ para guardar el paradero en Guardados.
+            </Guide>
 
             {stop.routes.length > 1 ? (
               <div className="mt-5 flex flex-wrap items-baseline gap-x-3 gap-y-1 font-mono text-[11.5px]">
