@@ -21,6 +21,8 @@ export interface MapStop {
   name: string;
   lat: number;
   lon: number;
+  /** Drawn as a rectangle: a TransMilenio station, not a street stop. */
+  station?: boolean;
 }
 
 export interface MapBus {
@@ -29,6 +31,8 @@ export interface MapBus {
   lon: number;
   /** The route the bus is running, as riders read it on the windscreen. */
   code?: string;
+  /** "troncal" for TransMilenio, anything else for the SITP. */
+  system?: string;
   /** Highlighted buses of the route in focus. */
   accent?: boolean;
 }
@@ -82,12 +86,14 @@ export function TransitMap(props: TransitMapProps) {
     });
 
     m.on("click", (event) => {
-      const hits = m.queryRenderedFeatures(event.point, { layers: ["stops"] });
+      const hits = m.queryRenderedFeatures(event.point, { layers: ["stops", "stations"] });
       const stop = hits[0];
       if (stop) live.current.onStop?.(String(stop.properties.id));
     });
-    m.on("mouseenter", "stops", () => (m.getCanvas().style.cursor = "pointer"));
-    m.on("mouseleave", "stops", () => (m.getCanvas().style.cursor = ""));
+    for (const layer of ["stops", "stations"]) {
+      m.on("mouseenter", layer, () => (m.getCanvas().style.cursor = "pointer"));
+      m.on("mouseleave", layer, () => (m.getCanvas().style.cursor = ""));
+    }
 
     const observer = new ResizeObserver(() => m.resize());
     observer.observe(container.current);
@@ -138,7 +144,7 @@ export function TransitMap(props: TransitMapProps) {
       features: (p.stops ?? []).map((stop) => ({
         type: "Feature",
         geometry: { type: "Point", coordinates: [stop.lon, stop.lat] },
-        properties: { id: stop.id, code: stop.code ?? stop.id, sel: stop.id === p.selected ? 1 : 0 },
+        properties: { id: stop.id, code: stop.code ?? stop.id, station: stop.station ? 1 : 0, sel: stop.id === p.selected ? 1 : 0 },
       })),
     });
     m.getSource<GeoJSONSource>("buses")?.setData({
@@ -146,7 +152,7 @@ export function TransitMap(props: TransitMapProps) {
       features: (p.buses ?? []).map((bus) => ({
         type: "Feature",
         geometry: { type: "Point", coordinates: [bus.lon, bus.lat] },
-        properties: { id: bus.id, code: bus.code ?? "", accent: bus.accent ? 1 : 0 },
+        properties: { id: bus.id, code: bus.code ?? "", system: bus.system ?? "other", accent: bus.accent ? 1 : 0 },
       })),
     });
     if (withFit) fitBounds();
@@ -251,6 +257,10 @@ function addLayers(m: MapLibre, dark: boolean) {
   const ink = dark ? "#eceee9" : "#111211";
   const paper = dark ? "#0a0b0a" : "#fbfbfa";
   const accent = dark ? "#90c4af" : "#1f5040";
+  // Red for TransMilenio, blue for the SITP: the two fleets riders name apart.
+  const troncal = dark ? "#ec4b41" : "#be4a3c";
+  const sitp = dark ? "#4d8bf2" : "#3d63a8";
+  const grey = dark ? "#9ba196" : "#7a7f78";
 
   m.addLayer({
     id: "path",
@@ -259,16 +269,35 @@ function addLayers(m: MapLibre, dark: boolean) {
     layout: { "line-cap": "round", "line-join": "round" },
     paint: { "line-color": accent, "line-width": ["interpolate", ["linear"], ["zoom"], 10, 1.2, 15, 2.4], "line-opacity": 0.9 },
   });
+  if (!m.hasImage("stop-frame")) m.addImage("stop-frame", frameIcon(24, 24, 3), { sdf: true });
+  if (!m.hasImage("station-frame")) m.addImage("station-frame", frameIcon(34, 16, 3.5), { sdf: true });
   m.addLayer({
     id: "stops",
-    type: "circle",
+    type: "symbol",
     source: "stops",
-    paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 10, 1.8, 14, 3, 17, 4.5],
-      "circle-color": ink,
-      "circle-opacity": 0.55,
+    filter: ["!=", ["get", "station"], 1],
+    layout: {
+      "icon-image": "stop-frame",
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 10, 0.32, 14, 0.46, 17, 0.7],
+      "icon-allow-overlap": true,
+      "icon-ignore-placement": true,
     },
-  });
+    paint: { "icon-color": grey, "icon-halo-color": paper, "icon-halo-width": 0.6 },
+  } satisfies SymbolLayerSpecification);
+  // A station is wider than a stop frame, so the corridor reads apart from the street.
+  m.addLayer({
+    id: "stations",
+    type: "symbol",
+    source: "stops",
+    filter: ["==", ["get", "station"], 1],
+    layout: {
+      "icon-image": "station-frame",
+      "icon-size": ["interpolate", ["linear"], ["zoom"], 10, 0.5, 14, 0.75, 17, 1.05],
+      "icon-allow-overlap": true,
+      "icon-ignore-placement": true,
+    },
+    paint: { "icon-color": grey, "icon-halo-color": paper, "icon-halo-width": 0.6 },
+  } satisfies SymbolLayerSpecification);
   m.addLayer({
     id: "stop-selected",
     type: "circle",
@@ -288,11 +317,11 @@ function addLayers(m: MapLibre, dark: boolean) {
     type: "circle",
     source: "buses",
     paint: {
-      "circle-radius": ["case", ["==", ["get", "accent"], 1], 2.8, 1.8],
-      "circle-color": ["case", ["==", ["get", "accent"], 1], accent, ink],
-      "circle-opacity": ["case", ["==", ["get", "accent"], 1], 1, 0.45],
+      "circle-radius": ["interpolate", ["linear"], ["zoom"], 11, 2.4, 17, 5],
+      "circle-color": ["case", ["==", ["get", "system"], "troncal"], troncal, sitp],
+      "circle-opacity": ["case", ["==", ["get", "accent"], 1], 1, 0.85],
       "circle-stroke-color": paper,
-      "circle-stroke-width": 0.8,
+      "circle-stroke-width": ["case", ["==", ["get", "accent"], 1], 2, 1],
     },
   });
 
@@ -353,7 +382,7 @@ function addLayers(m: MapLibre, dark: boolean) {
     id: "bus-codes",
     type: "symbol",
     source: "buses",
-    minzoom: 15,
+    minzoom: 14.5,
     filter: ["all", ["!=", ["get", "accent"], 1], ["!=", ["get", "code"], ""]],
     layout: {
       "text-field": ["get", "code"],
@@ -365,6 +394,20 @@ function addLayers(m: MapLibre, dark: boolean) {
     },
     paint: { "text-color": ink, "text-opacity": 0.7, "text-halo-color": paper, "text-halo-width": 1.2 },
   } satisfies SymbolLayerSpecification);
+}
+
+/** An outline frame, tinted at paint time: a square for a stop, a rectangle for a station. */
+function frameIcon(width: number, height: number, lineWidth: number): ImageData {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d");
+  if (ctx) {
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = lineWidth;
+    ctx.strokeRect(lineWidth / 2, lineWidth / 2, width - lineWidth, height - lineWidth);
+  }
+  return ctx ? ctx.getImageData(0, 0, width, height) : new ImageData(width, height);
 }
 
 /** The font stack the basemap already loads, so our labels reuse its glyphs. */

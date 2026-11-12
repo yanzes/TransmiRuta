@@ -101,7 +101,14 @@ export function RouteScreen({ id }: { id: string }) {
                 dark={dark}
                 stops={(line.stops ?? []).map((stop) => ({ id: stop.id, name: stop.name ?? stop.id, lat: stop.lat, lon: stop.lon }))}
                 path={line.coordinates}
-                buses={onRoad.map((bus) => ({ id: bus.id, lat: bus.lat, lon: bus.lon, code: route.code, accent: true }))}
+                buses={onRoad.map((bus) => ({
+                  id: bus.id,
+                  lat: bus.lat,
+                  lon: bus.lon,
+                  code: route.code,
+                  system: fleet?.routes[id]?.system ?? route.system,
+                  accent: true,
+                }))}
                 fit
               />
             </div>

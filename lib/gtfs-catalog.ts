@@ -15,6 +15,7 @@ const ROUTES = catalog.routes as unknown as Record<string, { code: string; stops
 const NAMES = names as unknown as Record<string, [string, string]>;
 
 let stations: Station[] | null = null;
+let mapPoints: MapPoint[] | null = null;
 let refs: Map<string, StopRef> | null = null;
 let byCode: Map<string, string> | null = null;
 let byStop: Map<string, RouteRef[]> | null = null;
@@ -23,6 +24,31 @@ let normalized: Map<string, string> | null = null;
 function routeName(id: string): string | null {
   const entry = NAMES[id]?.[1];
   return entry ? entry.split("||")[0].trim() : null;
+}
+
+export interface MapPoint {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  /** TransMilenio names its stations "Estación …" and its portals "Portal …". */
+  station: boolean;
+}
+
+/** Every served stop as the map draws it: a point, plus whether it is a station. */
+export function mapStops(): MapPoint[] {
+  if (mapPoints) return mapPoints;
+  mapPoints = stationsFromCatalog().map((stop) => {
+    const name = fold(stop.name);
+    return {
+      id: stop.id,
+      name: stop.name,
+      lat: stop.lat,
+      lon: stop.lon,
+      station: name.startsWith("estacion") || name.startsWith("portal"),
+    };
+  });
+  return mapPoints;
 }
 
 /** A route in the shape the screens use, or null when the catalog does not know it. */

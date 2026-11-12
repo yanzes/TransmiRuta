@@ -12,6 +12,14 @@ import { useSaved, type SavedStop } from "@/lib/saved";
 import type { Fleet, Nearby } from "@/lib/types";
 import { useJson } from "@/lib/use-live";
 
+interface MapPoint {
+  id: string;
+  name: string;
+  lat: number;
+  lon: number;
+  station: boolean;
+}
+
 export function HomeScreen() {
   const dark = useDark();
   const router = useRouter();
@@ -21,21 +29,25 @@ export function HomeScreen() {
 
   const { data: fleet } = useJson<Fleet>("/api/fleet", 15_000);
   const { data: nearby, loading } = useJson<Nearby>(`/api/nearby?lat=${anchor.lat.toFixed(3)}&lon=${anchor.lon.toFixed(3)}`, 60_000);
+  // The whole network, not only the eight stops in the list: a map that hides
+  // every other stop cannot be used to find your way.
+  const { data: allStops } = useJson<{ stops: MapPoint[] }>("/api/stops", 3_600_000);
   const saved = useSaved().filter((item): item is SavedStop => item.type === "stop").slice(0, 5);
   const stops = nearby?.stops ?? [];
+  const stopsOnMap = allStops?.stops ?? stops.map((stop) => ({ id: stop.id, name: stop.name, lat: stop.lat, lon: stop.lon, station: false }));
 
-  // Only buses on routes that touch the stops on screen: the map stays quiet.
+  // Every bus inside the map's reach, whatever route it runs: this screen is
+  // about where the buses are, not only which stops exist near the centre.
   const buses = useMemo(() => {
     if (!fleet) return [];
-    const codes = new Set(stops.flatMap((stop) => stop.routes.map((route) => route.code)));
     return fleet.buses
       .flatMap((bus) => {
+        if (Math.abs(bus.lat - anchor.lat) > 0.055 || Math.abs(bus.lon - anchor.lon) > 0.055) return [];
         const route = bus.route ? fleet.routes[bus.route] : undefined;
-        if (!route?.code || !codes.has(route.code)) return [];
-        return [{ id: bus.id, lat: bus.lat, lon: bus.lon, code: route.code }];
+        return [{ id: bus.id, lat: bus.lat, lon: bus.lon, code: route?.code ?? undefined, system: route?.system ?? "other" }];
       })
-      .slice(0, 300);
-  }, [fleet, stops]);
+      .slice(0, 1200);
+  }, [fleet, anchor.lat, anchor.lon]);
 
   const locate = () => {
     if (!navigator.geolocation) {
@@ -128,10 +140,9 @@ export function HomeScreen() {
             <TransitMap
               dark={dark}
               center={[anchor.lon, anchor.lat]}
-              zoom={13.4}
-              stops={stops}
+              zoom={13.6}
+              stops={stopsOnMap}
               buses={buses}
-              fit={!here}
               onStop={(id) => router.push(`/parada/${id}`)}
             />
           </div>

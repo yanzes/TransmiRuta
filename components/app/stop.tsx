@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { TransitMap } from "@/components/app/map";
+import { systemFor } from "@/lib/system-of";
 import { BackLink, Bone, Empty, FeedLine, Guide, Label, Shell, TextButton, useDark } from "@/components/app/primitives";
 import { ArrivalRow, NextArrival, RouteRow } from "@/components/app/rows";
 import { toggleStop, useIsSaved } from "@/lib/saved";
@@ -21,7 +22,7 @@ export function StopScreen({ id }: { id: string }) {
   const [next, ...later] = arrivals;
   const buses = (data?.incoming ?? [])
     .filter((bus) => !only || bus.code === only)
-    .map((bus) => ({ id: bus.id, lat: bus.lat, lon: bus.lon, code: bus.code, accent: true }));
+    .map((bus) => ({ id: bus.id, lat: bus.lat, lon: bus.lon, code: bus.code, system: systemFor(bus.code), accent: true }));
 
   return (
     <Shell className="py-8">
